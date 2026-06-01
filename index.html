@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Family Store - Asheville’s Jewish Heritage Walking Tour</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #2563eb;
+            --accent: #d97706;
+            --accent-light: #f59e0b;
+            --bg-sidebar: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-body);
+            background-color: #020617;
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar Container */
+        .sidebar {
+            width: 380px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 10;
+            box-shadow: 4px 0 25px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
+        }
+
+        .sidebar.collapsed {
+            margin-left: -380px;
+        }
+
+        /* Sidebar Header */
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+        }
+
+        .sidebar-header h1 {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            color: #ffffff;
+            letter-spacing: -0.025em;
+            line-height: 1.2;
+        }
+
+        .sidebar-header p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .tour-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 14px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .tour-badge {
+            background-color: rgba(217, 119, 6, 0.2);
+            color: var(--accent-light);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(217, 119, 6, 0.3);
+        }
+
+        .tour-stops-count {
+            color: var(--text-muted);
+        }
+
+        /* Search Filter Container */
+        .search-container {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            background-color: rgba(15, 23, 42, 0.6);
+        }
+
+        .search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 14px 10px 38px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: var(--font-body);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+            background-color: var(--bg-card-hover);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            width: 16px;
+            height: 16px;
+            fill: var(--text-muted);
+            pointer-events: none;
+        }
+
+        /* Landmark List */
+        .landmark-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Custom Scrollbar for Sidebar */
+        .landmark-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .landmark-list::-webkit-scrollbar-track {
+            background: var(--bg-sidebar);
+        }
+
+        .landmark-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .landmark-list::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Landmark Card */
+        .landmark-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 16px 20px 16px; /* Generous bottom padding to give text ample room */
+            display: flex;
+            align-items: flex-start; /* Align elements to the top so text can expand downward */
+            gap: 14px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+            min-height: 84px; /* Establish a comfortable minimum height */
+        }
+
+        .landmark-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: transparent;
+            transition: background-color 0.2s ease;
+        }
+
+        .landmark-card:hover {
+            background-color: var(--bg-card-hover);
+            transform: translateY(-2px);
+            border-color: #475569;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .landmark-card.active {
+            background-color: rgba(30, 58, 138, 0.25);
+            border-color: rgba(37, 99, 235, 0.5);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .landmark-card.active::before {
+            background-color: var(--accent);
+        }
+
+        /* Badge for Marker Number */
+        .landmark-badge {
+            width: 28px;
+            height: 28px;
+            background-color: var(--primary);
+            color: #ffffff;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 13px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .landmark-card:hover .landmark-badge {
+            background-color: var(--primary-light);
+            transform: scale(1.1);
+        }
+
+        .landmark-card.active .landmark-badge {
+            background-color: var(--accent);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 8px rgba(217, 119, 6, 0.4);
+        }
+
+        .landmark-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1; /* Allow text container to take all available width */
+            min-width: 0; /* Prevent flex overflow */
+            padding-bottom: 2px; /* Extra bottom breathing room for text content */
+        }
+
+        .landmark-name {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.4;
+            color: var(--text-main);
+            transition: color 0.2s ease;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            display: block;
+        }
+
+        .landmark-card.active .landmark-name {
+            color: #ffffff;
+        }
+
+        .landmark-address {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            display: block;
+        }
+
+        /* Main Map Container */
+        .map-wrapper {
+            flex: 1;
+            position: relative;
+            height: 100%;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Sidebar Toggle Button */
+        .sidebar-toggle {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            z-index: 100;
+            background-color: var(--bg-sidebar);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 12px;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sidebar-toggle:hover {
+            background-color: var(--bg-card-hover);
+            border-color: #475569;
+            transform: translateY(-1px);
+        }
+
+        /* Beautiful Custom InfoWindow Styles */
+        .info-window {
+            padding: 0;
+            max-width: 320px;
+            font-family: var(--font-body);
+            color: #1e293b;
+            box-sizing: border-box;
+        }
+
+        .info-window-image {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .info-window-content {
+            padding: 4px 10px 10px 10px;
+        }
+
+        .info-window h3 {
+            margin: 0 0 8px 0;
+            font-family: var(--font-display);
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1.3;
+        }
+
+        .info-window .address-text {
+            margin: 0 0 10px 0;
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.4;
+        }
+
+        .info-window-details {
+            margin-top: 12px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #334155;
+        }
+
+        .info-window-qa {
+            margin-bottom: 8px;
+            border-bottom: 1px dashed #cbd5e1;
+            padding-bottom: 8px;
+        }
+
+        .info-window-q {
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
+
+        .info-window-a {
+            color: #475569;
+        }
+
+        .info-window-tp {
+            font-style: italic;
+        }
+
+        .info-window-tp-title {
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+            display: block;
+        }
+
+        .info-window-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+            margin-top: 10px;
+        }
+
+        .info-window-badge {
+            background-color: rgba(30, 58, 138, 0.1);
+            color: var(--primary);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .info-window a {
+            color: var(--primary-light);
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.15s ease;
+        }
+
+        .info-window a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column-reverse;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: 45vh;
+                border-right: none;
+                border-top: 1px solid var(--border);
+            }
+
+            .sidebar.collapsed {
+                margin-left: 0;
+                height: 0;
+                overflow: hidden;
+            }
+
+            .map-wrapper {
+                flex: 1;
+                height: 55vh;
+            }
+
+            .sidebar-toggle {
+                top: auto;
+                bottom: 20px;
+                left: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar Container -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h1>The Family Store</h1>
+            <p>Asheville’s Jewish Heritage Walking Tour</p>
+            <div class="tour-meta">
+                <span class="tour-badge">Walking Tour</span>
+                <span class="tour-stops-count" id="stops-counter">24 Stops</span>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <div class="search-wrapper">
+                <svg class="search-icon" viewBox="0 0 24 24">
+                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                </svg>
+                <input type="text" class="search-input" id="search-input" placeholder="Search landmarks or addresses..." autocomplete="off">
+            </div>
+        </div>
+
+        <div class="landmark-list" id="landmark-list">
+            <!-- Dynamically populated via JS -->
+        </div>
+    </aside>
+
+    <!-- Map Area -->
+    <main class="map-wrapper">
+        <button class="sidebar-toggle" id="sidebar-toggle">
+            <span id="toggle-icon">◀</span>
+            <span id="toggle-text">Hide List</span>
+        </button>
+        <div id="map"></div>
+    </main>
+
+    <!-- Google Maps API and Application Logic -->
+    <script>
+        // 24 landmarks geocoded directly from avl.csv & walking tour RTF
+        const locations = [
+    {
+        "number": 1,
+        "name": "Pack Square",
+        "address": "N Pack Square, Asheville, NC 28801",
+        "lat": 35.5952657,
+        "lng": -82.5518417,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    },
+    {
+        "number": 2,
+        "name": "The Block",
+        "address": "Intersection of Eagle and Market Streets, Asheville, NC 28801",
+        "lat": 35.5940222,
+        "lng": -82.55024209999999,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    },
+    {
+        "number": 3,
+        "name": "Asheville City Hall",
+        "address": "70 Court Plaza, Asheville, NC 28801",
+        "lat": 35.5954894,
+        "lng": -82.5485842,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    },
+    {
+        "number": 4,
+        "name": "Black Mountain College Museum",
+        "address": "120 College St, Asheville, NC 28801",
+        "lat": 35.5959506,
+        "lng": -82.5505268,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    },
+    {
+        "number": 5,
+        "name": "Sprinza Weizenblatt's Office",
+        "address": "Grove Arcade, 1 Page Ave, Asheville, NC 28801",
+        "lat": 35.595615,
+        "lng": -82.5566561,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    },
+    {
+        "number": 6,
+        "name": "Asheville Community Theatre",
+        "address": "35 E Walnut St, Asheville, NC 28801",
+        "lat": 35.5972285,
+        "lng": -82.5508232,
+        "location_desc": "Corner of Walnut and North Market Sts.",
+        "question": "Harry Blomberg\u2019s father told him he had \u201cwheels in his head\u201d because he loved automobiles. What business would this have been in 1923?",
+        "answer": "A gas station. Harry Blomberg loved cars. He also had a motor inn where the Thomas Wolfe Visitors Center is today. It was for car repairs and detailing. The Blomberg family still owns a car dealership in West Asheville: Harry\u2019s on the Hill.",
+        "teachingPoint": "Harry\u2019s motto was: \u201cWork hard, treat your customers and employees fairly, and always give back to your community.\u201d A better community benefits everyone. Harry was the first to hire a Black mechanic to work in his garage.",
+        "image": "asheville_community_theatre.png"
+    },
+    {
+        "number": 7,
+        "name": "Harry Blomberg's Gas Station",
+        "address": "Corner of E Walnut St & N Market St, Asheville, NC 28801",
+        "lat": 35.5971566,
+        "lng": -82.5513069,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    },
+    {
+        "number": 8,
+        "name": "Schandler's Pickle Barrel",
+        "address": "50 Broadway St, Asheville, NC 28801",
+        "lat": 35.5968431,
+        "lng": -82.5519349,
+        "location_desc": "50 Broadway Street",
+        "question": "If you are mellow and like pizza where would you go?",
+        "answer": "Mellow Mushroom was once a Pure Oil gas station. In the 1960s it became Schandler\u2019s Pickle Barrel. Enter through the door on the right and look to your left you will find the original Schandler\u2019s Pickle Barrel sign hanging above the door.",
+        "teachingPoint": "Schandler\u2019s was a kosher style deli. The Jewish community supported food familiar to  their culture. They brought their culture and particularly their foodways, down South with them. Where can\u2019t you find a bagel? What types of food do you think Schandlers might have had on their menu?",
+        "image": "mellow_mushroom_deli.jpg"
+    },
+    {
+        "number": 9,
+        "name": "Finkelstein's Pawn Shop",
+        "address": "21 Broadway St, Asheville, NC 28801",
+        "lat": 35.5960396,
+        "lng": -82.5523358,
+        "location_desc": "21 Broadway St.",
+        "question": "What business claims to be the oldest pawn shop in North Carolina and was known as \u201cthe poor man\u2019s bank\u2018? What would you do to get cash before ATMs?",
+        "answer": "Finkelstein\u2019s Pawn Shop",
+        "teachingPoint": "A pawn shop was  a way for people without bank accounts to borrow money by exchanging their possessions for money. They often hoped to buy back their possessions when they had the money. The Finkelsteins were an example of family chains. You could find brothers who had Finkelstein\u2019s Pawn Shops in Wilmington and Jacksonville for example.",
+        "image": "finkelstein_pawn_shop.jpg"
+    },
+    {
+        "number": 10,
+        "name": "Black Mountain Tribute Wall",
+        "address": "Alley off W Walnut St between Broadway St and N Lexington Ave, Asheville, NC 28801",
+        "lat": 35.59664879075107,
+        "lng": -82.55257361045591,
+        "location_desc": "Alley off Walnut St. between Broadway St. and North Lexington. Look at the basement windows.",
+        "question": "Where was Black Mountain College (BMC)? What festival is held on the former campus two times a year?  Who is the man in the geodesic dome?",
+        "answer": "Camp Rockmont in Black Mountain. LEAF is held on the former campus. Buckminster Fuller, inventor of the geodesic dome is in the window to the right. He built his first dome at BMC.",
+        "teachingPoint": "Black Mountain College was started in 1933 as a school of working artists including painters, writers, potters, and dancers. Its founders felt you could learn everything you needed to know from the arts.  The same year Hitler closed the Bauhaus, a famous school of design in Germany. Having a job abroad was a way to escape from Germany. Some of the Bauhaus faculty came to Black Mountain College to find sanctuary. Several were Jews escaping Hitler, like Anni Albers who was a textile designer. She founded the weaving program at Black Mountain College.",
+        "image": "black_mountain_tribute_wall.jpg"
+    },
+    {
+        "number": 11,
+        "name": "Asheville Showcase",
+        "address": "57 Broadway St, Asheville, NC 28801",
+        "lat": 35.5972734,
+        "lng": -82.5525409,
+        "location_desc": "57 Broadway St.",
+        "question": "Where can you find a chef who can\u2019t cook? What kind of business would this have been?",
+        "answer": "Mr. Equipit.  It was a restaurant supply business.",
+        "teachingPoint": "Broadway Street had mostly wholesale businesses.  Asheville Showcase was owned by the Rocamora family for two generations. Mr. Rocamora died suddenly in 1935 and his wife, Fann, had to take over the business. Few. If any, women ran wholesale restaurant equipment supply businesses. Mrs. Rocomora was very business savvy. She would offer her customers swigs of moonshine from a jug in the back of the store. Family businesses were common among Jewish retailers and they often incorporated local traditions.",
+        "image": "asheville_showcase.jpg"
+    },
+    {
+        "number": 12,
+        "name": "Moogseum",
+        "address": "56 Broadway St Front, Asheville, NC 28801",
+        "lat": 35.5973126,
+        "lng": -82.5521351,
+        "location_desc": "56 Broadway Street",
+        "question": "Where can you find a museum for electronic musical instruments? Who invented the Moog synthesizer?",
+        "answer": "The Moogseum; Robert Moog (1934-2005) invented an electronic musical instrument used by rock groups such as The Beatles, Prince, and The Doors. The Moog synthesizer generates sounds by combining audio signals of different frequencies, timbres and harmonics.",
+        "teachingPoint": "Robert Moog was able to follow his dream. go to college, and work with musical instruments. Parents wanted their children to have opportunities that were not available to them so they encouraged their children to further their education. Robert Moog was a third generation American: an example of  how Jews used education to rise in the world. He was a professional, not a merchant as first generation immigrants often were. He also follows a pattern of how northerners, particularly New Yorkers, came South in search of opportunity.",
+        "image": "moogseum.jpg"
+    },
+    {
+        "number": 13,
+        "name": "Masonic Temple",
+        "address": "80 Broadway St, Asheville, NC 28801",
+        "lat": 35.5981415,
+        "lng": -82.55233760000002,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    },
+    {
+        "number": 14,
+        "name": "Chicken Alley",
+        "address": "Off Woodfin St between Broadway and N Lexington, Asheville, NC 28801",
+        "lat": 35.5996541,
+        "lng": -82.55447389999999,
+        "location_desc": "Off Woodfin St. between Broadway and North Lexington",
+        "question": "Where can you find a chicken you can never eat?",
+        "answer": "This mural! In fact, across from the mural is where Jake Rosen butchered chickens following religious rituals that made them kosher.",
+        "teachingPoint": "Jake Rosen was a schochet, a person trained in ritual slaughter that made meat kosher. He specialized in chickens. It was difficult to keep kosher in Asheville. Though kosher chicken was locally available, other types of meat had to be brought in from Cincinnati or Atlanta. This was costly and refrigeration did not always keep the meat fresh, so some people discontinued following the tradition.",
+        "image": "chicken_alley_mural.png"
+    },
+    {
+        "number": 15,
+        "name": "Bessie Rosen's Grocery",
+        "address": "88 N Lexington Ave, Asheville, NC 28801",
+        "lat": 35.5978524,
+        "lng": -82.5534768,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    },
+    {
+        "number": 16,
+        "name": "Vanderbilt Shirt Company",
+        "address": "65 W Walnut St, Asheville, NC 28801",
+        "lat": 35.5965455,
+        "lng": -82.5535234,
+        "location_desc": "65 Walnut Street",
+        "question": "What is the name over the door to an antique shop on Walnut Street under the pink banner?",
+        "answer": "The Vanderbilt Shirt Company. Three men who came back after WWII (late 1940s) decided to make shirts even though they didn\u2019t know how. They had previously been in the tire retread business, which was hot and smelly.",
+        "teachingPoint": "Jewish business people often took risks moving to small towns or cities where there were few other Jewish families. If they could not make a living they moved on. They also realized that taking care of workers was important to the success of a company. The owners of this shirt company noticed many of  their workers did not have front teeth due to poor nutrition. Being forward thinking they had a health department nurse teach their employees about better nutrition.",
+        "image": "vanderbilt_shirt_company.png"
+    },
+    {
+        "number": 17,
+        "name": "Tops for Shoes",
+        "address": "27 N Lexington Ave, Asheville, NC 28801",
+        "lat": 35.59571460000001,
+        "lng": -82.5532655,
+        "location_desc": "27 North Lexington Ave.",
+        "question": "Where can you buy nice shoes?",
+        "answer": "Tops for Shoes",
+        "teachingPoint": "Tops was one of the few businesses that stayed downtown when most wanted to move to the mall in the 1970s. It was started by Mr. Reznikoff, who handed it down to his daughter and son-in-law, and today it is run by his grandson. \u201cFamily chains\u201d were common in Jewish businesses before big chain department stores and big box stores. A staple of downtown, Tops is one of the few downtown businesses still owned by and operated by the same family for three generations",
+        "image": "tops_for_shoes.png"
+    },
+    {
+        "number": 18,
+        "name": "Coleman Zageir and the Man's Store",
+        "address": "22 Patton Ave, Asheville, NC 28801",
+        "lat": 35.5947175,
+        "lng": -82.55277869999999,
+        "location_desc": "across from the Kress building.",
+        "question": "What business did Coleman Zageir own?  What local college campus has a building named after him?",
+        "answer": "The Man Store; UNC Asheville",
+        "teachingPoint": "Colman Zageir was very philanthropic and involved in civic affairs to improve Asheville. He believed in giving back to his community and making it a better place. Even today many in the Jewish community are involved in nonprofit organizations that help others. Look at the back side of the panel and you will see the original interior of the S and W cafeteria. On the lower right you will see a picture of Lou Pollock (1887-1956) at his annual shoe give away on Christmas.",
+        "image": "coleman_zageir.png"
+    },
+    {
+        "number": 19,
+        "name": "S&W Cafeteria",
+        "address": "56 Patton Ave, Asheville, NC 28801",
+        "lat": 35.5943974,
+        "lng": -82.55390249999999,
+        "location_desc": "56 Patton Ave.",
+        "question": "Where was the Birthplace of the JCC? Can you find the letters S and W above the door?",
+        "answer": "Jewish organizations would hold meetings on the upper floors of the S and W. In the 1930s, they did not feel safe without someone guarding the door. In 1938 a group of people got together and purchased a location for a Jewish Community Center, which today is the Asheville JCC.  Here they could have their own space, which provided more opportunity to socialize and interact with the entire Asheville community.",
+        "teachingPoint": "",
+        "image": "sw_cafeteria.jpg"
+    },
+    {
+        "number": 20,
+        "name": "Flatiron Building",
+        "address": "20 Battery Park Ave, Asheville, NC 28801",
+        "lat": 35.5950016,
+        "lng": -82.5551785,
+        "location_desc": "20 Battery Park Ave.",
+        "question": "Where can you find an iron you cannot press your clothing with? What do the radio station call letters WWNC (1927-PRESENT) stand for?",
+        "answer": "The Flatiron building once had a radio station in it - WWNC which stood for Wonderful Western North Carolina.",
+        "teachingPoint": "Rabbi Unger of CBHT had an interfaith radio show (1940s-1960s) called \u201cHear O Israel\u201d broadcast from that station.The program  was created to promote better understanding and cooperation between different faiths.",
+        "image": "flatiron_building.png"
+    },
+    {
+        "number": 21,
+        "name": "Bon Marche Department Store",
+        "address": "33 Haywood St, Asheville, NC 28801",
+        "lat": 35.5957,
+        "lng": -82.5545714,
+        "location_desc": "33 Haywood Street",
+        "question": "What was the name of the department store with the initials BM?",
+        "answer": "Bon Marche (1890-1970) This was the Lipinsky family department store. It had been where the Haywood Park Hotel is today before it moved across the street to this location(1930s).",
+        "teachingPoint": "Many Jews were retail shop owners. Because Jews were  not allowed to work in many occupations in Europe when they came to America they were in retail. They built successful businesses from very little and with no formal education; e.g. peddlers became department store owners.",
+        "image": "bon_marche.png"
+    },
+    {
+        "number": 22,
+        "name": "Winner's Department Store",
+        "address": "34 Haywood St, Asheville, NC 28801",
+        "lat": 35.59564,
+        "lng": -82.554839,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    },
+    {
+        "number": 23,
+        "name": "The Family Store Plaque",
+        "address": "55 Haywood St, Asheville, NC 28801",
+        "lat": 35.5961409,
+        "lng": -82.5548546,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    },
+    {
+        "number": 24,
+        "name": "Basilica of Saint Lawrence",
+        "address": "97 Haywood St, Asheville, NC 28801",
+        "lat": 35.597352,
+        "lng": -82.55631199999999,
+        "location_desc": "",
+        "question": "",
+        "answer": "",
+        "teachingPoint": "",
+        "image": null
+    }
+];
+
+        // Clean silver dark-highlighting map styles
+        const mapStyles = [
+            { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
+            { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+            { "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
+            { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f5f5" }] },
+            { "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [{ "color": "#bdbdbd" }] },
+            { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
+            { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+            { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
+            { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
+            { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
+            { "featureType": "road.arterial", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+            { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#dadada" }] },
+            { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
+            { "featureType": "road.local", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
+            { "featureType": "transit.line", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
+            { "featureType": "transit.station", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
+            { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#c2d1e0" }] }, // slightly bluer water
+            { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] }
+        ];
+
+        let map;
+        let markers = [];
+        let infoWindow;
+        let activeMarkerIndex = -1;
+
+        // Custom SVG Pin Symbol Builder
+        function getMarkerSymbol(number, isActive) {
+            return {
+                path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z', // Solid teardrop pin
+                fillColor: isActive ? '#d97706' : '#1e3a8a', // Gold active vs Deep Navy inactive
+                fillOpacity: 1.0,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+                scale: isActive ? 1.8 : 1.4,
+                anchor: new google.maps.Point(12, 22),
+                labelOrigin: new google.maps.Point(12, 9)
+            };
+        }
+
+        // Initialize Google Map
+        function initMap() {
+            const mapOptions = {
+                zoom: 15,
+                center: { lat: 35.5960, lng: -82.5530 }, // Centered perfectly on downtown Asheville
+                styles: mapStyles,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                zoomControlOptions: {
+                    position: google.maps.ControlPosition.RIGHT_CENTER
+                }
+            };
+
+            map = new google.maps.Map(document.getElementById("map"), mapOptions);
+            infoWindow = new google.maps.InfoWindow();
+
+            // Handle when InfoWindow is closed by clicking "X"
+            infoWindow.addListener('closeclick', () => {
+                deactivateAll();
+            });
+
+            renderSidebarList(locations);
+            createMarkers(locations);
+        }
+
+        // Create Markers on Map
+        function createMarkers(data) {
+            // Clear existing
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+
+            data.forEach((loc, idx) => {
+                if (!loc.lat || !loc.lng) return;
+
+                const marker = new google.maps.Marker({
+                    position: { lat: loc.lat, lng: loc.lng },
+                    title: `${loc.number}. ${loc.name}`,
+                    icon: getMarkerSymbol(loc.number, false),
+                    label: {
+                        text: loc.number.toString(),
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        fontFamily: 'Outfit'
+                    },
+                    map: map
+                });
+
+                marker.addListener("click", () => {
+                    selectLocation(idx);
+                });
+
+                markers.push(marker);
+            });
+        }
+
+        // Render Sidebar List Cards
+        function renderSidebarList(data) {
+            const listContainer = document.getElementById("landmark-list");
+            listContainer.innerHTML = "";
+
+            if (data.length === 0) {
+                listContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">
+                        No matching landmarks found.
+                    </div>
+                `;
+                document.getElementById("stops-counter").innerText = "0 Stops";
+                return;
+            }
+
+            document.getElementById("stops-counter").innerText = `${data.length} Stop${data.length === 1 ? '' : 's'}`;
+
+            data.forEach((loc, index) => {
+                // Find actual index in original locations array
+                const originalIndex = locations.findIndex(l => l.number === loc.number);
+
+                const card = document.createElement("div");
+                card.className = "landmark-card";
+                card.id = `card-${originalIndex}`;
+                card.innerHTML = `
+                    <div class="landmark-badge">${loc.number}</div>
+                    <div class="landmark-info">
+                        <span class="landmark-name">${loc.name}</span>
+                        <span class="landmark-address">${loc.address}</span>
+                    </div>
+                `;
+
+                card.addEventListener("click", () => {
+                    selectLocation(originalIndex);
+                });
+
+                listContainer.appendChild(card);
+            });
+        }
+
+        // Select and Highlight Location (both list and marker)
+        function selectLocation(index) {
+            deactivateAll();
+
+            activeMarkerIndex = index;
+            const loc = locations[index];
+            const marker = markers[index];
+
+            // 1. Highlight Marker
+            if (marker) {
+                marker.setIcon(getMarkerSymbol(loc.number, true));
+                marker.setZIndex(google.maps.Marker.MAX_ZINDEX + 1);
+                
+                // 2. Open InfoWindow
+                let imageHtml = "";
+                if (loc.image) {
+                    imageHtml = `<img src="${loc.image}" class="info-window-image" alt="${loc.name}">`;
+                }
+
+                let detailsHtml = "";
+                if (loc.question || loc.teachingPoint) {
+                    detailsHtml += `<div class="info-window-details">`;
+                    if (loc.question) {
+                        detailsHtml += `
+                            <div class="info-window-qa">
+                                <div class="info-window-q">❓ Q: ${loc.question}</div>
+                                <div class="info-window-a">💡 A: ${loc.answer}</div>
+                            </div>
+                        `;
+                    }
+                    if (loc.teachingPoint) {
+                        detailsHtml += `
+                            <div class="info-window-tp">
+                                <span class="info-window-tp-title">Teaching Point</span>
+                                ${loc.teachingPoint}
+                            </div>
+                        `;
+                    }
+                    detailsHtml += `</div>`;
+                }
+
+                const content = `
+                    <div class="info-window">
+                        ${imageHtml}
+                        <div class="info-window-content">
+                            <h3>${loc.number}. ${loc.name}</h3>
+                            <p class="address-text">${loc.location_desc || loc.address}</p>
+                            ${detailsHtml}
+                            <div class="info-window-footer">
+                                <span class="info-window-badge">Stop #${loc.number}</span>
+                                <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank">
+                                    View on Maps ↗
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                infoWindow.setContent(content);
+                infoWindow.open(map, marker);
+            }
+
+            // 3. Pan map smoothly
+            map.panTo({ lat: loc.lat, lng: loc.lng });
+            // minor zoom in if zoomed out
+            if (map.getZoom() < 16) {
+                map.setZoom(16);
+            }
+
+            // 4. Highlight Sidebar Card
+            const card = document.getElementById(`card-${index}`);
+            if (card) {
+                card.classList.add("active");
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Deactivate all highlighted cards and markers
+        function deactivateAll() {
+            if (activeMarkerIndex !== -1) {
+                const loc = locations[activeMarkerIndex];
+                const marker = markers[activeMarkerIndex];
+                if (marker) {
+                    marker.setIcon(getMarkerSymbol(loc.number, false));
+                    marker.setZIndex(null);
+                }
+                
+                const card = document.getElementById(`card-${activeMarkerIndex}`);
+                if (card) {
+                    card.classList.remove("active");
+                }
+            }
+            activeMarkerIndex = -1;
+        }
+
+        // Collapsible Sidebar Setup
+        const sidebar = document.getElementById("sidebar");
+        const toggleBtn = document.getElementById("sidebar-toggle");
+        const toggleIcon = document.getElementById("toggle-icon");
+        const toggleText = document.getElementById("toggle-text");
+
+        toggleBtn.addEventListener("click", () => {
+            const isCollapsed = sidebar.classList.toggle("collapsed");
+            toggleIcon.innerText = isCollapsed ? "▶" : "◀";
+            toggleText.innerText = isCollapsed ? "Show List" : "Hide List";
+            
+            // Trigger maps resize
+            if (map) {
+                setTimeout(() => {
+                    google.maps.event.trigger(map, 'resize');
+                }, 300);
+            }
+        });
+
+        // Live Search Filtering
+        const searchInput = document.getElementById("search-input");
+        searchInput.addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            const filtered = locations.filter(loc => 
+                loc.name.toLowerCase().includes(query) || 
+                loc.address.toLowerCase().includes(query)
+            );
+            
+            renderSidebarList(filtered);
+            
+            // Show/hide markers based on match
+            locations.forEach((loc, idx) => {
+                const isMatch = filtered.some(f => f.number === loc.number);
+                if (markers[idx]) {
+                    markers[idx].setVisible(isMatch);
+                }
+            });
+        });
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB9_MF2J2Lkb2WhL2-fwwRkfsobBJ0Clps&callback=initMap" async defer></script>
+</body>
+
+</html>
