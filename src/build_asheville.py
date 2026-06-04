@@ -1,4 +1,134 @@
-<!DOCTYPE html>
+import json
+import urllib.parse
+import requests
+import time
+import os
+import csv
+
+API_KEY = 'AIzaSyB9_MF2J2Lkb2WhL2-fwwRkfsobBJ0Clps'
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(SCRIPT_DIR, 'avl.csv')
+CACHE_PATH = os.path.join(SCRIPT_DIR, 'geocoded_avl.json')
+OUTPUT_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'index.html')
+MAP_HTML_PATH = os.path.join(SCRIPT_DIR, 'map.html')
+
+def geocode(address):
+    url = f'https://maps.googleapis.com/maps/api/geocode/json?address={urllib.parse.quote(address)}&key={API_KEY}'
+    try:
+        res = requests.get(url, timeout=10).json()
+        if res.get('status') == 'OK' and res.get('results'):
+            loc = res['results'][0]['geometry']['location']
+            return loc['lat'], loc['lng']
+    except Exception as e:
+        print(f'  Geocode error for {address}: {e}')
+    return None, None
+
+def load_cache():
+    if os.path.exists(CACHE_PATH):
+        try:
+            with open(CACHE_PATH, 'r') as f:
+                data = json.load(f)
+                return {item['name']: (item['lat'], item['lng']) for item in data if item.get('lat') is not None}
+        except Exception as e:
+            print(f"Error loading cache: {e}")
+    return {}
+
+def save_cache(cache_data):
+    # Convert cache back to list format to save
+    list_data = []
+    for idx, (name, (lat, lng)) in enumerate(cache_data.items(), 1):
+        list_data.append({
+            "number": idx,
+            "name": name,
+            "address": name, # rough fallback
+            "lat": lat,
+            "lng": lng
+        })
+    try:
+        with open(CACHE_PATH, 'w') as f:
+            json.dump(list_data, f, indent=2)
+    except Exception as e:
+        print(f"Error saving cache: {e}")
+
+def main():
+    print("Loading walking tour landmarks from CSV...")
+    landmarks = []
+    
+    if not os.path.exists(CSV_PATH):
+        print(f"Error: CSV file not found at {CSV_PATH}")
+        return
+
+    with open(CSV_PATH, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            landmarks.append({
+                "number": int(row['Number']),
+                "name": row['Landmark'],
+                "address": row['Address'],
+                "location_desc": row.get('LocationDesc', ''),
+                "question": row.get('Question', ''),
+                "answer": row.get('Answer', ''),
+                "teachingPoint": row.get('TeachingPoint', ''),
+                "image": row.get('Image', '')
+            })
+
+    print(f"Loaded {len(landmarks)} landmarks from CSV.")
+    cache = load_cache()
+
+    markers = []
+    cache_updated = False
+
+    for loc in landmarks:
+        name = loc['name']
+        address = loc['address']
+        num = loc['number']
+        
+        # Check cache first
+        if name in cache:
+            lat, lng = cache[name]
+            print(f"Found cache for #{num}: {name} ({lat}, {lng})")
+        else:
+            print(f"Geocoding #{num}: {name}...")
+            lat, lng = geocode(address)
+            time.sleep(0.15)
+            if lat is not None:
+                cache[name] = (lat, lng)
+                cache_updated = True
+                print(f"  Geocoded: {lat}, {lng}")
+            else:
+                print(f"  Warning: Geocoding failed for {name} ({address})")
+        
+        markers.append({
+            "number": num,
+            "name": name,
+            "address": address,
+            "lat": lat,
+            "lng": lng,
+            "location_desc": loc.get("location_desc", ""),
+            "question": loc.get("question", ""),
+            "answer": loc.get("answer", ""),
+            "teachingPoint": loc.get("teachingPoint", ""),
+            "image": loc.get("image", "")
+        })
+
+    if cache_updated:
+        # Re-save updated cache with current list of locations
+        save_list = []
+        for m in markers:
+            save_list.append({
+                "number": m["number"],
+                "name": m["name"],
+                "address": m["address"],
+                "lat": m["lat"],
+                "lng": m["lng"]
+            })
+        with open(CACHE_PATH, 'w') as f:
+            json.dump(save_list, f, indent=2)
+        print("Updated geocode cache saved.")
+
+    markers_json = json.dumps(markers, indent=4)
+
+    html_content = f"""<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -12,7 +142,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
-        :root {
+        :root {{
             --primary: #1e3a8a;
             --primary-light: #2563eb;
             --accent: #d97706;
@@ -27,9 +157,9 @@
             --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-        }
+        }}
 
-        body {
+        body {{
             margin: 0;
             padding: 0;
             font-family: var(--font-body);
@@ -38,10 +168,10 @@
             height: 100vh;
             display: flex;
             overflow: hidden;
-        }
+        }}
 
         /* Sidebar Container */
-        .sidebar {
+        .sidebar {{
             width: 380px;
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border);
@@ -52,20 +182,20 @@
             box-shadow: 4px 0 25px rgba(0, 0, 0, 0.5);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             flex-shrink: 0;
-        }
+        }}
 
-        .sidebar.collapsed {
+        .sidebar.collapsed {{
             margin-left: -380px;
-        }
+        }}
 
         /* Sidebar Header */
-        .sidebar-header {
+        .sidebar-header {{
             padding: 24px;
             border-bottom: 1px solid var(--border);
             background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
-        }
+        }}
 
-        .sidebar-header h1 {
+        .sidebar-header h1 {{
             font-family: var(--font-display);
             font-size: 20px;
             font-weight: 700;
@@ -73,16 +203,16 @@
             color: #ffffff;
             letter-spacing: -0.025em;
             line-height: 1.2;
-        }
+        }}
 
-        .sidebar-header p {
+        .sidebar-header p {{
             font-size: 13px;
             color: var(--text-muted);
             margin: 0;
             line-height: 1.4;
-        }
+        }}
 
-        .tour-meta {
+        .tour-meta {{
             display: flex;
             align-items: center;
             gap: 12px;
@@ -91,34 +221,34 @@
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-        }
+        }}
 
-        .tour-badge {
+        .tour-badge {{
             background-color: rgba(217, 119, 6, 0.2);
             color: var(--accent-light);
             padding: 4px 8px;
             border-radius: 4px;
             border: 1px solid rgba(217, 119, 6, 0.3);
-        }
+        }}
 
-        .tour-stops-count {
+        .tour-stops-count {{
             color: var(--text-muted);
-        }
+        }}
 
         /* Search Filter Container */
-        .search-container {
+        .search-container {{
             padding: 16px 24px;
             border-bottom: 1px solid var(--border);
             background-color: rgba(15, 23, 42, 0.6);
-        }
+        }}
 
-        .search-wrapper {
+        .search-wrapper {{
             position: relative;
             display: flex;
             align-items: center;
-        }
+        }}
 
-        .search-input {
+        .search-input {{
             width: 100%;
             padding: 10px 14px 10px 38px;
             background-color: var(--bg-card);
@@ -129,53 +259,53 @@
             font-size: 14px;
             outline: none;
             transition: all 0.2s ease;
-        }
+        }}
 
-        .search-input:focus {
+        .search-input:focus {{
             border-color: var(--primary-light);
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
             background-color: var(--bg-card-hover);
-        }
+        }}
 
-        .search-icon {
+        .search-icon {{
             position: absolute;
             left: 12px;
             width: 16px;
             height: 16px;
             fill: var(--text-muted);
             pointer-events: none;
-        }
+        }}
 
         /* Landmark List */
-        .landmark-list {
+        .landmark-list {{
             flex: 1;
             overflow-y: auto;
             padding: 16px 24px;
             display: flex;
             flex-direction: column;
             gap: 12px;
-        }
+        }}
 
         /* Custom Scrollbar for Sidebar */
-        .landmark-list::-webkit-scrollbar {
+        .landmark-list::-webkit-scrollbar {{
             width: 6px;
-        }
+        }}
 
-        .landmark-list::-webkit-scrollbar-track {
+        .landmark-list::-webkit-scrollbar-track {{
             background: var(--bg-sidebar);
-        }
+        }}
 
-        .landmark-list::-webkit-scrollbar-thumb {
+        .landmark-list::-webkit-scrollbar-thumb {{
             background: var(--border);
             border-radius: 3px;
-        }
+        }}
 
-        .landmark-list::-webkit-scrollbar-thumb:hover {
+        .landmark-list::-webkit-scrollbar-thumb:hover {{
             background: var(--text-muted);
-        }
+        }}
 
         /* Landmark Card */
-        .landmark-card {
+        .landmark-card {{
             background-color: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -190,9 +320,9 @@
             overflow: hidden;
             box-sizing: border-box;
             min-height: 84px; /* Establish a comfortable minimum height */
-        }
+        }}
 
-        .landmark-card::before {
+        .landmark-card::before {{
             content: '';
             position: absolute;
             left: 0;
@@ -201,27 +331,27 @@
             width: 4px;
             background-color: transparent;
             transition: background-color 0.2s ease;
-        }
+        }}
 
-        .landmark-card:hover {
+        .landmark-card:hover {{
             background-color: var(--bg-card-hover);
             transform: translateY(-2px);
             border-color: #475569;
             box-shadow: var(--shadow-lg);
-        }
+        }}
 
-        .landmark-card.active {
+        .landmark-card.active {{
             background-color: rgba(30, 58, 138, 0.25);
             border-color: rgba(37, 99, 235, 0.5);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
+        }}
 
-        .landmark-card.active::before {
+        .landmark-card.active::before {{
             background-color: var(--accent);
-        }
+        }}
 
         /* Badge for Marker Number */
-        .landmark-badge {
+        .landmark-badge {{
             width: 28px;
             height: 28px;
             background-color: var(--primary);
@@ -236,29 +366,29 @@
             flex-shrink: 0;
             border: 2px solid rgba(255, 255, 255, 0.1);
             transition: all 0.2s ease;
-        }
+        }}
 
-        .landmark-card:hover .landmark-badge {
+        .landmark-card:hover .landmark-badge {{
             background-color: var(--primary-light);
             transform: scale(1.1);
-        }
+        }}
 
-        .landmark-card.active .landmark-badge {
+        .landmark-card.active .landmark-badge {{
             background-color: var(--accent);
             border-color: rgba(255, 255, 255, 0.2);
             box-shadow: 0 0 8px rgba(217, 119, 6, 0.4);
-        }
+        }}
 
-        .landmark-info {
+        .landmark-info {{
             display: flex;
             flex-direction: column;
             gap: 6px;
             flex: 1; /* Allow text container to take all available width */
             min-width: 0; /* Prevent flex overflow */
             padding-bottom: 2px; /* Extra bottom breathing room for text content */
-        }
+        }}
 
-        .landmark-name {
+        .landmark-name {{
             font-size: 15px;
             font-weight: 600;
             line-height: 1.4;
@@ -267,35 +397,35 @@
             word-wrap: break-word;
             overflow-wrap: break-word;
             display: block;
-        }
+        }}
 
-        .landmark-card.active .landmark-name {
+        .landmark-card.active .landmark-name {{
             color: #ffffff;
-        }
+        }}
 
-        .landmark-address {
+        .landmark-address {{
             font-size: 12px;
             color: var(--text-muted);
             line-height: 1.4;
             word-wrap: break-word;
             overflow-wrap: break-word;
             display: block;
-        }
+        }}
 
         /* Main Map Container */
-        .map-wrapper {
+        .map-wrapper {{
             flex: 1;
             position: relative;
             height: 100%;
-        }
+        }}
 
-        #map {
+        #map {{
             height: 100%;
             width: 100%;
-        }
+        }}
 
         /* Sidebar Toggle Button */
-        .sidebar-toggle {
+        .sidebar-toggle {{
             position: absolute;
             left: 20px;
             top: 20px;
@@ -316,53 +446,53 @@
             transition: all 0.2s ease;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-        }
+        }}
 
-        .sidebar-toggle:hover {
+        .sidebar-toggle:hover {{
             background-color: var(--bg-card-hover);
             border-color: #475569;
             transform: translateY(-1px);
-        }
+        }}
 
         /* Beautiful Custom InfoWindow Styles */
-        .info-window {
+        .info-window {{
             padding: 0;
             max-width: 320px;
             font-family: var(--font-body);
             color: #1e293b;
             box-sizing: border-box;
-        }
+        }}
 
-        .info-window-image {
+        .info-window-image {{
             width: 100%;
             height: 160px;
             object-fit: cover;
             border-radius: 8px 8px 0 0;
             margin-bottom: 12px;
             display: block;
-        }
+        }}
 
-        .info-window-content {
+        .info-window-content {{
             padding: 4px 10px 10px 10px;
-        }
+        }}
 
-        .info-window h3 {
+        .info-window h3 {{
             margin: 0 0 8px 0;
             font-family: var(--font-display);
             font-size: 17px;
             font-weight: 700;
             color: var(--primary);
             line-height: 1.3;
-        }
+        }}
 
-        .info-window .address-text {
+        .info-window .address-text {{
             margin: 0 0 10px 0;
             font-size: 13px;
             color: #475569;
             line-height: 1.4;
-        }
+        }}
 
-        .info-window-details {
+        .info-window-details {{
             margin-top: 12px;
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -371,29 +501,29 @@
             font-size: 12px;
             line-height: 1.4;
             color: #334155;
-        }
+        }}
 
-        .info-window-qa {
+        .info-window-qa {{
             margin-bottom: 8px;
             border-bottom: 1px dashed #cbd5e1;
             padding-bottom: 8px;
-        }
+        }}
 
-        .info-window-q {
+        .info-window-q {{
             font-weight: 700;
             color: var(--accent);
             margin-bottom: 4px;
-        }
+        }}
 
-        .info-window-a {
+        .info-window-a {{
             color: #475569;
-        }
+        }}
 
-        .info-window-tp {
+        .info-window-tp {{
             font-style: italic;
-        }
+        }}
 
-        .info-window-tp-title {
+        .info-window-tp-title {{
             font-weight: 700;
             color: var(--primary);
             text-transform: uppercase;
@@ -401,27 +531,27 @@
             letter-spacing: 0.05em;
             margin-bottom: 2px;
             display: block;
-        }
+        }}
 
-        .info-window-footer {
+        .info-window-footer {{
             display: flex;
             align-items: center;
             justify-content: space-between;
             border-top: 1px solid #e2e8f0;
             padding-top: 8px;
             margin-top: 10px;
-        }
+        }}
 
-        .info-window-badge {
+        .info-window-badge {{
             background-color: rgba(30, 58, 138, 0.1);
             color: var(--primary);
             font-size: 11px;
             font-weight: 700;
             padding: 2px 6px;
             border-radius: 4px;
-        }
+        }}
 
-        .info-window a {
+        .info-window a {{
             color: var(--primary-light);
             text-decoration: none;
             font-size: 12px;
@@ -430,50 +560,50 @@
             align-items: center;
             gap: 4px;
             transition: color 0.15s ease;
-        }
+        }}
 
-        .info-window a:hover {
+        .info-window a:hover {{
             color: var(--primary);
             text-decoration: underline;
-        }
+        }}
 
         /* Bottom Detail Panel hidden by default on desktop */
-        .detail-panel {
+        .detail-panel {{
             display: none;
-        }
+        }}
 
         /* Mobile Adjustments */
-        @media (max-width: 768px) {
-            body {
+        @media (max-width: 768px) {{
+            body {{
                 flex-direction: column-reverse;
-            }
+            }}
 
-            .sidebar {
+            .sidebar {{
                 width: 100%;
                 height: 45vh;
                 border-right: none;
                 border-top: 1px solid var(--border);
-            }
+            }}
 
-            .sidebar.collapsed {
+            .sidebar.collapsed {{
                 margin-left: 0;
                 height: 0;
                 overflow: hidden;
-            }
+            }}
 
-            .map-wrapper {
+            .map-wrapper {{
                 flex: 1;
                 height: 55vh;
-            }
+            }}
 
-            .sidebar-toggle {
+            .sidebar-toggle {{
                 top: auto;
                 bottom: 20px;
                 left: 20px;
-            }
+            }}
 
             /* Bottom Detail Panel for Mobile styling */
-            .detail-panel {
+            .detail-panel {{
                 display: flex;
                 position: fixed;
                 bottom: 0;
@@ -490,13 +620,13 @@
                 flex-direction: column;
                 box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.5);
                 box-sizing: border-box;
-            }
+            }}
 
-            .detail-panel.active {
+            .detail-panel.active {{
                 transform: translateY(0);
-            }
+            }}
 
-            .detail-header {
+            .detail-header {{
                 padding: 12px 20px;
                 border-bottom: 1px solid var(--border);
                 display: flex;
@@ -505,9 +635,9 @@
                 background-color: rgba(15, 23, 42, 0.6);
                 border-top-left-radius: 16px;
                 border-top-right-radius: 16px;
-            }
+            }}
 
-            .detail-close {
+            .detail-close {{
                 background: none;
                 border: none;
                 color: var(--text-muted);
@@ -515,65 +645,65 @@
                 cursor: pointer;
                 padding: 0;
                 line-height: 1;
-            }
+            }}
 
-            .detail-body {
+            .detail-body {{
                 padding: 20px;
                 overflow-y: auto;
                 flex: 1;
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
-            }
+            }}
 
-            .detail-body h3 {
+            .detail-body h3 {{
                 margin: 0;
                 font-family: var(--font-display);
                 font-size: 18px;
                 font-weight: 700;
                 color: #ffffff;
                 line-height: 1.3;
-            }
+            }}
 
-            .detail-address {
+            .detail-address {{
                 font-size: 12px;
                 color: var(--text-muted);
                 margin: 0;
                 line-height: 1.4;
-            }
+            }}
 
-            .detail-description {
+            .detail-description {{
                 font-size: 13.5px;
                 line-height: 1.5;
                 color: var(--text-main);
                 margin: 0;
-            }
+            }}
 
-            .detail-images-wrapper {
+            .detail-images-wrapper {{
                 display: flex;
                 flex-direction: column;
                 gap: 10px;
                 margin: 8px 0;
-            }
+            }}
 
-            .detail-images-wrapper img {
+            .detail-images-wrapper img {{
                 width: 100%;
                 border-radius: 8px;
                 max-height: 180px;
                 object-fit: cover;
                 display: block;
-            }
+            }}
 
-            .detail-footer {
+            .detail-footer {{
                 padding: 12px 20px;
                 border-top: 1px solid var(--border);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 background-color: rgba(15, 23, 42, 0.6);
-            }
+            }}
 
-            .detail-footer a {
+            .detail-footer a {{
                 color: var(--primary-light);
                 text-decoration: none;
                 font-size: 13px;
@@ -581,9 +711,9 @@
                 display: inline-flex;
                 align-items: center;
                 gap: 4px;
-            }
+            }}
 
-            .detail-details {
+            .detail-details {{
                 background-color: var(--bg-card);
                 border: 1px solid var(--border);
                 border-radius: 8px;
@@ -591,29 +721,29 @@
                 font-size: 13px;
                 line-height: 1.5;
                 color: var(--text-main);
-            }
+            }}
 
-            .detail-qa {
+            .detail-qa {{
                 margin-bottom: 8px;
                 border-bottom: 1px dashed var(--border);
                 padding-bottom: 8px;
-            }
+            }}
 
-            .detail-q {
+            .detail-q {{
                 font-weight: 700;
                 color: var(--accent-light);
                 margin-bottom: 4px;
-            }
+            }}
 
-            .detail-a {
+            .detail-a {{
                 color: var(--text-main);
-            }
+            }}
 
-            .detail-tp {
+            .detail-tp {{
                 font-style: italic;
                 color: var(--text-main);
-            }
-        }
+            }}
+        }}
     </style>
 </head>
 
@@ -625,7 +755,7 @@
             <p>Asheville’s Jewish Heritage Walking Tour</p>
             <div class="tour-meta">
                 <span class="tour-badge">Walking Tour</span>
-                <span class="tour-stops-count" id="stops-counter">24 Stops</span>
+                <span class="tour-stops-count" id="stops-counter">{len(landmarks)} Stops</span>
             </div>
         </div>
 
@@ -672,317 +802,28 @@
     <!-- Google Maps API and Application Logic -->
     <script>
         // 24 landmarks geocoded directly from avl.csv & walking tour RTF
-        const locations = [
-    {
-        "number": 1,
-        "name": "Pack Square",
-        "address": "N Pack Square, Asheville, NC 28801",
-        "lat": 35.5952657,
-        "lng": -82.5518417,
-        "location_desc": "",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Jews have landed on North Carolina soil since the 1500\u2019s. The first Jews that we can document came during the Civil War and by 1891 there were enough to form a congregation, Beth HaTephila.",
-        "image": ""
-    },
-    {
-        "number": 2,
-        "name": "The Block",
-        "address": "Intersection of Eagle and Market Streets, Asheville, NC 28801",
-        "lat": 35.5940222,
-        "lng": -82.55024209999999,
-        "location_desc": "",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "The Block was traditionally the Black business district and the center of its community. Some Jewish merchants ran businesses here also.",
-        "image": ""
-    },
-    {
-        "number": 3,
-        "name": "Asheville City Hall",
-        "address": "70 Court Plaza, Asheville, NC 28801",
-        "lat": 35.5954894,
-        "lng": -82.5485842,
-        "location_desc": "",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "City Hall is an icon of Asheville\u2019s boom in the 1920s. The City has had three Jewish Mayors: Ken Michalove, Leni Sitnick and Esther Manheimer.",
-        "image": ""
-    },
-    {
-        "number": 4,
-        "name": "Black Mountain College Museum",
-        "address": "120 College St, Asheville, NC 28801",
-        "lat": 35.5959506,
-        "lng": -82.5505268,
-        "location_desc": "",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Black Mountain College was started in 1933 as a school of working artists including painters, writers, potters, and dancers. The same year Hitler closed the Bauhaus, a famous school of design in Germany. A job at Black Mountain was a way to escape from Germany, so some teachers came from the Bauhaus.",
-        "image": "black_mountain_college_museum.jpg"
-    },
-    {
-        "number": 5,
-        "name": "Sprinza Weizenblatt\u2019s Office",
-        "address": "29 North Market Street, Asheville, NC 28801",
-        "lat": 35.5966906,
-        "lng": -82.55135659999999,
-        "location_desc": "",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Sprinza came to Asheville in 1928 from Vienna, Austria. She was a well-respected ophthalmologist.",
-        "image": ""
-    },
-    {
-        "number": 6,
-        "name": "Asheville Community Theatre",
-        "address": "35 E Walnut St, Asheville, NC 28801",
-        "lat": 35.5972285,
-        "lng": -82.5508232,
-        "location_desc": "35 East Walnut St.",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Many people in the Jewish community were involved with ACT. This Urban Trail marker is dedicated in memory of Ann Sternberg who was one of four generations of women in her family to have the BRCA gene type of breast cancer: a genetic disorder common in Ashkenazi Jews. She had a career in New York theater.",
-        "image": ""
-    },
-    {
-        "number": 7,
-        "name": "Blomberg Annex to Asheville Community Theatre",
-        "address": "Corner of E Walnut St & N Market St, Asheville, NC 28801",
-        "lat": 35.5971566,
-        "lng": -82.5513069,
-        "location_desc": "Corner of Walnut and North Market Streets",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "This was Harry Blomberg\u2019s gas station in 1927. Harry\u2019s motto was: \u201cWork hard, treat your customers and employees fairly, and always give back to your community.\u201d A better community benefits everyone.",
-        "image": "asheville_community_theatre.png"
-    },
-    {
-        "number": 8,
-        "name": "Schandler\u2019s Pickle Barrel",
-        "address": "50 Broadway St, Asheville, NC 28801",
-        "lat": 35.5968431,
-        "lng": -82.5519349,
-        "location_desc": "50 Broadway Street",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "The building was once a Pure Oil gas station. In the 1960s it became the deli of Aaron Shandler..Enter through the door on the right and look to your left you will find the original Schandler\u2019s Pickle Barrel sign hanging above the door.",
-        "image": "mellow_mushroom_deli.jpg,schandlers_pickle_barrel_card.jpg"
-    },
-    {
-        "number": 9,
-        "name": "Finkelstein's Pawn Shop",
-        "address": "21 Broadway St, Asheville, NC 28801",
-        "lat": 35.5960396,
-        "lng": -82.5523358,
-        "location_desc": "21 Broadway St.",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "A pawn shop was the ATM of its time. It was a way for people without bank accounts to get cash by exchanging their possessions. It was founded in 1903 by Harry Finkelstein and occupied various locations.",
-        "image": "finkelstein_pawn_shop.jpg"
-    },
-    {
-        "number": 10,
-        "name": "Black Mountain College Tribute Wall",
-        "address": "Alley off W Walnut St between Broadway St and N Lexington Ave, Asheville, NC 28801",
-        "lat": 35.59664879075107,
-        "lng": -82.55257361045591,
-        "location_desc": "Carolina Lane \u2013 An alley off Walnut St. between Broadway St. and North Lexington (Look at basement windows)",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "The second picture on the right is a picture of the Black Mountain College campus in Black Mountain, NC. The first picture is Buckminster Fuller in the geodesic dome he designed at the college.",
-        "image": "black_mountain_tribute_wall.jpg"
-    },
-    {
-        "number": 11,
-        "name": "Asheville Showcase",
-        "address": "57 Broadway St, Asheville, NC 28801",
-        "lat": 35.5972734,
-        "lng": -82.5525409,
-        "location_desc": "57 Broadway St.",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Asheville Showcase was a restaurant supply business. It was owned by the Rocamora family for two generations. After Mr. Rocamora died suddenly in 1935 his wife Fann took over the business. Few if any, women ran wholesale restaurant equipment supply businesses.",
-        "image": "asheville_showcase.jpg,asheville_showcase_mr_equipit.jpg"
-    },
-    {
-        "number": 12,
-        "name": "Moogseum",
-        "address": "56 Broadway St Front, Asheville, NC 28801",
-        "lat": 35.5973126,
-        "lng": -82.5521351,
-        "location_desc": "56 Broadway St.",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "The Moogseum is a museum for electronic musical instruments invented by Robert Moog. His synthesizer was used by many music groups: The Beatles, Prince, the Doors, the Grateful Dead, the Rolling Stones, Tangerine Dream, and Emerson, Lake & Palmer. A synthesizer is an electronic musical instrument, typically operated by a keyboard, in which the user can sculpt sound by generating and combining audio signals of different frequencies, timbres, and harmonics.",
-        "image": "moogseum.jpg"
-    },
-    {
-        "number": 13,
-        "name": "Masonic Temple",
-        "address": "80 Broadway St, Asheville, NC 28801",
-        "lat": 35.5981415,
-        "lng": -82.55233760000002,
-        "location_desc": "80 Broadway Street",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Masonic membership was a way to assimilate.",
-        "image": ""
-    },
-    {
-        "number": 14,
-        "name": "Chicken Alley",
-        "address": "Chicken Alley, Asheville, NC 28801",
-        "lat": 35.5979519,
-        "lng": -82.5533979,
-        "location_desc": "Chicken Alley",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Across from the mural was Jake Rosen\u2019s butcher shop. Jake Rosen was a schochet, a person trained in ritual slaughter that made meat kosher. He specialized in chickens both kosher and nonkosher.",
-        "image": "chicken_alley_mural.png"
-    },
-    {
-        "number": 15,
-        "name": "Bessie Rosen\u2019s Grocery Store",
-        "address": "88 N Lexington Avenue, Asheville, NC 28801",
-        "lat": 35.5978524,
-        "lng": -82.5534768,
-        "location_desc": "88 Lexington Avenue",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Bessie had the largest grocery store on the street and the first walk in cooler.",
-        "image": ""
-    },
-    {
-        "number": 16,
-        "name": "Vanderbilt Shirt Factory",
-        "address": "65 W Walnut St, Asheville, NC 28801",
-        "lat": 35.5965455,
-        "lng": -82.5535234,
-        "location_desc": "65 West Walnut Street",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "The Vanderbilt Shirt Company was started by three soldiers who came back after WWII and decided to make shirts, even though they did not know how.",
-        "image": "vanderbilt_shirt_company.png"
-    },
-    {
-        "number": 17,
-        "name": "Tops for Shoes",
-        "address": "27 N Lexington Ave, Asheville, NC 28801",
-        "lat": 35.59571460000001,
-        "lng": -82.5532655,
-        "location_desc": "27 North Lexington Ave.",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Tops was one of the few businesses that stayed downtown when most wanted to move to the mall. It was started by Louis Reznikoff and is now family run for three generations. \u201cFamily chains\u201d were common in Jewish businesses before chain department stores and big box stores.",
-        "image": "tops_for_shoes.png,tops_for_shoes_vintage.jpg"
-    },
-    {
-        "number": 18,
-        "name": "Coleman Zagier and the Man\u2019s Store",
-        "address": "22 Patton Ave, Asheville, NC 28801",
-        "lat": 35.5947175,
-        "lng": -82.55277869999999,
-        "location_desc": "Free standing panel across from the Kress building on Patton Avenue",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Colman Zaiger who owned The Man Store; was very philanthropic and involved in civic affairs to improve Asheville. Zageir Hall is named after him on the campus of UNC Asheville.",
-        "image": "coleman_zageir.png,coleman_zagier_portrait.jpg,the_man_store_storefront.jpg"
-    },
-    {
-        "number": 19,
-        "name": "S and W Cafeteria",
-        "address": "56 Patton Ave, Asheville, NC 28801",
-        "lat": 35.5943974,
-        "lng": -82.55390249999999,
-        "location_desc": "56 Patton Avenue",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Jewish organizations would hold meetings on the upper floors of the S and W. It was the 1930s and they did not feel safe without a guard at the door. In 1938 a group of people got together and purchased a location for a Jewish Community Center, which today is the Asheville JCC. Here they could have their own space and more opportunities to socialize.",
-        "image": "sw_cafeteria.jpg"
-    },
-    {
-        "number": 20,
-        "name": "Flatiron Building",
-        "address": "20 Battery Park Ave, Asheville, NC 28801",
-        "lat": 35.5950016,
-        "lng": -82.5551785,
-        "location_desc": "20 Battery Park Ave.",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "The Flatiron building once had a radio station in it - WWNC which stood for Wonderful Western North Carolina. Rabbi Unger of Congregation Beth HaTephila had an interfaith radio show called \u201cHear O Israel\u201d broadcast from that station. The program was created to promote better understanding and communication between different faiths.",
-        "image": "flatiron_building.png"
-    },
-    {
-        "number": 21,
-        "name": "Bon Marche Department Store",
-        "address": "33 Haywood St, Asheville, NC 28801",
-        "lat": 35.5957,
-        "lng": -82.5545714,
-        "location_desc": "33 Haywood Street",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "This was the Lipinsky family's department store. It had many locations including across the street now the Haywood Park Hotel .",
-        "image": "bon_marche.png,bon_marche_floor.jpg,bon_marche_33_haywood.jpg,bon_marche_corner.jpg"
-    },
-    {
-        "number": 22,
-        "name": "Winners Department store",
-        "address": "36 Haywood Street, Asheville, NC 28801",
-        "lat": 35.5956872,
-        "lng": -82.5549182,
-        "location_desc": "36 Haywood Street",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Owned by Harry Winner who was champion of integration, it was the first business to have a Black mannequin in the window and only one water fountain for both Blacks and whites.",
-        "image": ""
-    },
-    {
-        "number": 23,
-        "name": "The Family Store Plaque",
-        "address": "46 Haywood Street on the sidewalk by the Urban Trail Marker to Shoppers, Asheville, NC 28801",
-        "lat": 35.5959356,
-        "lng": -82.55504669999999,
-        "location_desc": "46 Haywood Street on the sidewalk by the Urban Trail Marker to Shoppers",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "This urban trail marker recognizes the contributions of Jewish merchants who contributed to the shaping of Asheville.",
-        "image": "family_store_plaque.jpg"
-    },
-    {
-        "number": 24,
-        "name": "Basilica of Saint Laurence",
-        "address": "97 Haywood St, Asheville, NC 28801",
-        "lat": 35.597352,
-        "lng": -82.55631199999999,
-        "location_desc": "97 Haywood Street",
-        "question": "",
-        "answer": "",
-        "teachingPoint": "Built by Raphael Gustovino. On the wall next to his crypt are pictures of 2 Popes and inscribed is the dedication from Rabbi Sydney Unger of Beth HaTephila.",
-        "image": ""
-    }
-];
+        const locations = {markers_json};
 
         // Clean silver dark-highlighting map styles
         const mapStyles = [
-            { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
-            { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-            { "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
-            { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f5f5" }] },
-            { "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [{ "color": "#bdbdbd" }] },
-            { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
-            { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-            { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
-            { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
-            { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
-            { "featureType": "road.arterial", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-            { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#dadada" }] },
-            { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
-            { "featureType": "road.local", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
-            { "featureType": "transit.line", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
-            { "featureType": "transit.station", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
-            { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#c2d1e0" }] }, // slightly bluer water
-            { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] }
+            {{ "elementType": "geometry", "stylers": [{{ "color": "#f5f5f5" }}] }},
+            {{ "elementType": "labels.icon", "stylers": [{{ "visibility": "off" }}] }},
+            {{ "elementType": "labels.text.fill", "stylers": [{{ "color": "#616161" }}] }},
+            {{ "elementType": "labels.text.stroke", "stylers": [{{ "color": "#f5f5f5" }}] }},
+            {{ "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [{{ "color": "#bdbdbd" }}] }},
+            {{ "featureType": "poi", "elementType": "geometry", "stylers": [{{ "color": "#eeeeee" }}] }},
+            {{ "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{{ "color": "#757575" }}] }},
+            {{ "featureType": "poi.park", "elementType": "geometry", "stylers": [{{ "color": "#e5e5e5" }}] }},
+            {{ "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{{ "color": "#9e9e9e" }}] }},
+            {{ "featureType": "road", "elementType": "geometry", "stylers": [{{ "color": "#ffffff" }}] }},
+            {{ "featureType": "road.arterial", "elementType": "labels.text.fill", "stylers": [{{ "color": "#757575" }}] }},
+            {{ "featureType": "road.highway", "elementType": "geometry", "stylers": [{{ "color": "#dadada" }}] }},
+            {{ "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{{ "color": "#616161" }}] }},
+            {{ "featureType": "road.local", "elementType": "labels.text.fill", "stylers": [{{ "color": "#9e9e9e" }}] }},
+            {{ "featureType": "transit.line", "elementType": "geometry", "stylers": [{{ "color": "#e5e5e5" }}] }},
+            {{ "featureType": "transit.station", "elementType": "geometry", "stylers": [{{ "color": "#eeeeee" }}] }},
+            {{ "featureType": "water", "elementType": "geometry", "stylers": [{{ "color": "#c2d1e0" }}] }}, // slightly bluer water
+            {{ "featureType": "water", "elementType": "labels.text.fill", "stylers": [{{ "color": "#9e9e9e" }}] }}
         ];
 
         let map;
@@ -991,8 +832,8 @@
         let activeMarkerIndex = -1;
 
         // Custom SVG Pin Symbol Builder
-        function getMarkerSymbol(number, isActive) {
-            return {
+        function getMarkerSymbol(number, isActive) {{
+            return {{
                 path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z', // Solid teardrop pin
                 fillColor: isActive ? '#d97706' : '#1e3a8a', // Gold active vs Deep Navy inactive
                 fillOpacity: 1.0,
@@ -1001,91 +842,91 @@
                 scale: isActive ? 1.8 : 1.4,
                 anchor: new google.maps.Point(12, 22),
                 labelOrigin: new google.maps.Point(12, 9)
-            };
-        }
+            }};
+        }}
 
         // Initialize Google Map
-        function initMap() {
-            const mapOptions = {
+        function initMap() {{
+            const mapOptions = {{
                 zoom: 15,
-                center: { lat: 35.5960, lng: -82.5530 }, // Centered perfectly on downtown Asheville
+                center: {{ lat: 35.5960, lng: -82.5530 }}, // Centered perfectly on downtown Asheville
                 styles: mapStyles,
                 mapTypeControl: false,
                 streetViewControl: false,
                 fullscreenControl: false,
-                zoomControlOptions: {
+                zoomControlOptions: {{
                     position: google.maps.ControlPosition.RIGHT_CENTER
-                }
-            };
+                }}
+            }};
 
             map = new google.maps.Map(document.getElementById("map"), mapOptions);
             infoWindow = new google.maps.InfoWindow();
 
             // Handle when InfoWindow is closed by clicking "X"
-            infoWindow.addListener('closeclick', () => {
+            infoWindow.addListener('closeclick', () => {{
                 deactivateAll();
-            });
+            }});
 
             // Close mobile detail panel or infoWindow on map click
-            map.addListener('click', () => {
-                if (window.innerWidth <= 768) {
+            map.addListener('click', () => {{
+                if (window.innerWidth <= 768) {{
                     closeMobilePanel();
-                } else {
+                }} else {{
                     infoWindow.close();
                     deactivateAll();
-                }
-            });
+                }}
+            }});
 
             renderSidebarList(locations);
             createMarkers(locations);
 
             // Fit map to bounds of all locations dynamically
             const bounds = new google.maps.LatLngBounds();
-            locations.forEach(loc => {
-                if (loc.lat && loc.lng) {
-                    bounds.extend({ lat: loc.lat, lng: loc.lng });
-                }
-            });
+            locations.forEach(loc => {{
+                if (loc.lat && loc.lng) {{
+                    bounds.extend({{ lat: loc.lat, lng: loc.lng }});
+                }}
+            }});
             map.fitBounds(bounds);
-        }
+        }}
 
         // Create Markers on Map
-        function createMarkers(data) {
+        function createMarkers(data) {{
             // Clear existing
             markers.forEach(m => m.setMap(null));
             markers = [];
 
-            data.forEach((loc, idx) => {
+            data.forEach((loc, idx) => {{
                 if (!loc.lat || !loc.lng) return;
 
-                const marker = new google.maps.Marker({
-                    position: { lat: loc.lat, lng: loc.lng },
-                    title: `${loc.number}. ${loc.name}`,
+                const marker = new google.maps.Marker({{
+                    position: {{ lat: loc.lat, lng: loc.lng }},
+                    title: `${{loc.number}}. ${{loc.name}}`,
                     icon: getMarkerSymbol(loc.number, false),
-                    label: {
+                    label: {{
                         text: loc.number.toString(),
                         color: '#ffffff',
                         fontSize: '11px',
                         fontWeight: '700',
                         fontFamily: 'Outfit'
-                    },
+                    }},
                     map: map
-                });
+                }});
 
-                marker.addListener("click", () => {
+                marker.addListener("click", () => {{
                     selectLocation(idx);
-                });
+                }});
 
                 markers.push(marker);
-            });
-        }
+            }});
+        }}
 
         // Render Sidebar List Cards
-        function renderSidebarList(data) {
+        function renderSidebarList(data) {{
             const listContainer = document.getElementById("landmark-list");
             listContainer.innerHTML = "";
 
-            if (data.length === 0) {
+            if (data.length === 0) {{
                 listContainer.innerHTML = `
                     <div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">
                         No matching landmarks found.
@@ -1093,35 +934,35 @@
                 `;
                 document.getElementById("stops-counter").innerText = "0 Stops";
                 return;
-            }
+            }}
 
-            document.getElementById("stops-counter").innerText = `${data.length} Stop${data.length === 1 ? '' : 's'}`;
+            document.getElementById("stops-counter").innerText = `${{data.length}} Stop${{data.length === 1 ? '' : 's'}}`;
 
-            data.forEach((loc, index) => {
+            data.forEach((loc, index) => {{
                 // Find actual index in original locations array
                 const originalIndex = locations.findIndex(l => l.number === loc.number);
 
                 const card = document.createElement("div");
                 card.className = "landmark-card";
-                card.id = `card-${originalIndex}`;
+                card.id = `card-${{originalIndex}}`;
                 card.innerHTML = `
-                    <div class="landmark-badge">${loc.number}</div>
+                    <div class="landmark-badge">${{loc.number}}</div>
                     <div class="landmark-info">
-                        <span class="landmark-name">${loc.name}</span>
-                        <span class="landmark-address">${loc.address}</span>
+                        <span class="landmark-name">${{loc.name}}</span>
+                        <span class="landmark-address">${{loc.address}}</span>
                     </div>
                 `;
 
-                card.addEventListener("click", () => {
+                card.addEventListener("click", () => {{
                     selectLocation(originalIndex);
-                });
+                }});
 
                 listContainer.appendChild(card);
-            });
-        }
+            }});
+        }}
 
         // Select and Highlight Location (both list and marker)
-        function selectLocation(index) {
+        function selectLocation(index) {{
             deactivateAll();
 
             activeMarkerIndex = index;
@@ -1129,56 +970,56 @@
             const marker = markers[index];
 
             // 1. Highlight Marker
-            if (marker) {
+            if (marker) {{
                 marker.setIcon(getMarkerSymbol(loc.number, true));
                 marker.setZIndex(google.maps.Marker.MAX_ZINDEX + 1);
                 
                 // 2. Open InfoWindow or Mobile Detail Panel
-                if (window.innerWidth <= 768) {
+                if (window.innerWidth <= 768) {{
                     infoWindow.close();
                     
                     // Populate Mobile Detail Panel
-                    document.getElementById("detail-badge").innerText = `Stop #${loc.number}`;
-                    document.getElementById("detail-title").innerText = `${loc.number}. ${loc.name}`;
+                    document.getElementById("detail-badge").innerText = `Stop #${{loc.number}}`;
+                    document.getElementById("detail-title").innerText = `${{loc.number}}. ${{loc.name}}`;
                     document.getElementById("detail-address").innerText = loc.location_desc || loc.address;
                     
                     // Build Images
                     let imageHtml = "";
-                    if (loc.image) {
+                    if (loc.image) {{
                         const imgs = loc.image.split(',');
-                        imgs.forEach(img => {
-                            if (img.trim()) {
-                                imageHtml += `<img src="${img.trim()}" alt="${loc.name}">`;
-                            }
-                        });
-                    }
+                        imgs.forEach(img => {{
+                            if (img.trim()) {{
+                                imageHtml += `<img src="${{img.trim()}}" alt="${{loc.name}}">`;
+                            }}
+                        }});
+                    }}
                     document.getElementById("detail-images").innerHTML = imageHtml;
                     
                     // Build Details/QA/Teaching Point
                     let detailsHtml = "";
-                    if (loc.question || loc.teachingPoint) {
+                    if (loc.question || loc.teachingPoint) {{
                         detailsHtml += `<div class="detail-details">`;
-                        if (loc.question) {
+                        if (loc.question) {{
                             detailsHtml += `
                                 <div class="detail-qa">
-                                    <div class="detail-q">❓ Q: ${loc.question}</div>
-                                    <div class="detail-a">💡 A: ${loc.answer}</div>
+                                    <div class="detail-q">❓ Q: ${{loc.question}}</div>
+                                    <div class="detail-a">💡 A: ${{loc.answer}}</div>
                                 </div>
                             `;
-                        }
-                        if (loc.teachingPoint) {
+                        }}
+                        if (loc.teachingPoint) {{
                             detailsHtml += `
                                 <div class="detail-tp">
-                                    ${loc.teachingPoint}
+                                    ${{loc.teachingPoint}}
                                 </div>
                             `;
-                        }
+                        }}
                         detailsHtml += `</div>`;
-                    }
+                    }}
                     document.getElementById("detail-desc").innerHTML = detailsHtml;
                     
                     // Link
-                    document.getElementById("detail-link").href = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
+                    document.getElementById("detail-link").href = `https://www.google.com/maps/search/?api=1&query=${{loc.lat}},${{loc.lng}}`;
                     
                     // Show Panel
                     document.getElementById("detail-panel").classList.add("active");
@@ -1186,49 +1027,49 @@
                     // Collapse Sidebar on mobile
                     sidebar.classList.add("collapsed");
                     updateSidebarToggle();
-                } else {
+                }} else {{
                     // Open InfoWindow
                     let imageHtml = "";
-                    if (loc.image) {
+                    if (loc.image) {{
                         const imgs = loc.image.split(',');
-                        imgs.forEach(img => {
-                            if (img.trim()) {
-                                imageHtml += `<img src="${img.trim()}" class="info-window-image" alt="${loc.name}">`;
-                            }
-                        });
-                    }
+                        imgs.forEach(img => {{
+                            if (img.trim()) {{
+                                imageHtml += `<img src="${{img.trim()}}" class="info-window-image" alt="${{loc.name}}">`;
+                            }}
+                        }});
+                    }}
 
                     let detailsHtml = "";
-                    if (loc.question || loc.teachingPoint) {
+                    if (loc.question || loc.teachingPoint) {{
                         detailsHtml += `<div class="info-window-details">`;
-                        if (loc.question) {
+                        if (loc.question) {{
                             detailsHtml += `
                                 <div class="info-window-qa">
-                                    <div class="info-window-q">❓ Q: ${loc.question}</div>
-                                    <div class="info-window-a">💡 A: ${loc.answer}</div>
+                                    <div class="info-window-q">❓ Q: ${{loc.question}}</div>
+                                    <div class="info-window-a">💡 A: ${{loc.answer}}</div>
                                 </div>
                             `;
-                        }
-                        if (loc.teachingPoint) {
+                        }}
+                        if (loc.teachingPoint) {{
                             detailsHtml += `
                                 <div class="info-window-tp">
-                                    ${loc.teachingPoint}
+                                    ${{loc.teachingPoint}}
                                 </div>
                             `;
-                        }
+                        }}
                         detailsHtml += `</div>`;
-                    }
+                    }}
 
                     const content = `
                         <div class="info-window">
-                            ${imageHtml}
+                            ${{imageHtml}}
                             <div class="info-window-content">
-                                <h3>${loc.number}. ${loc.name}</h3>
-                                <p class="address-text">${loc.location_desc || loc.address}</p>
-                                ${detailsHtml}
+                                <h3>${{loc.number}}. ${{loc.name}}</h3>
+                                <p class="address-text">${{loc.location_desc || loc.address}}</p>
+                                ${{detailsHtml}}
                                 <div class="info-window-footer">
-                                    <span class="info-window-badge">Stop #${loc.number}</span>
-                                    <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank">
+                                    <span class="info-window-badge">Stop #${{loc.number}}</span>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=${{loc.lat}},${{loc.lng}}" target="_blank">
                                         View on Maps ↗
                                     </a>
                                 </div>
@@ -1237,46 +1078,46 @@
                     `;
                     infoWindow.setContent(content);
                     infoWindow.open(map, marker);
-                }
-            }
+                }}
+            }}
 
             // 3. Pan map smoothly
-            map.panTo({ lat: loc.lat, lng: loc.lng });
+            map.panTo({{ lat: loc.lat, lng: loc.lng }});
             // minor zoom in if zoomed out
-            if (map.getZoom() < 16) {
+            if (map.getZoom() < 16) {{
                 map.setZoom(16);
-            }
-            if (window.innerWidth <= 768) {
-                setTimeout(() => {
+            }}
+            if (window.innerWidth <= 768) {{
+                setTimeout(() => {{
                     if (map) map.panBy(0, 120);
-                }, 150);
-            }
+                }}, 150);
+            }}
 
             // 4. Highlight Sidebar Card
-            const card = document.getElementById(`card-${index}`);
-            if (card) {
+            const card = document.getElementById(`card-${{index}}`);
+            if (card) {{
                 card.classList.add("active");
-                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }
+                card.scrollIntoView({{ behavior: 'smooth', block: 'nearest' }});
+            }}
+        }}
 
         // Deactivate all highlighted cards and markers
-        function deactivateAll() {
-            if (activeMarkerIndex !== -1) {
+        function deactivateAll() {{
+            if (activeMarkerIndex !== -1) {{
                 const loc = locations[activeMarkerIndex];
                 const marker = markers[activeMarkerIndex];
-                if (marker) {
+                if (marker) {{
                     marker.setIcon(getMarkerSymbol(loc.number, false));
                     marker.setZIndex(null);
-                }
+                }}
                 
-                const card = document.getElementById(`card-${activeMarkerIndex}`);
-                if (card) {
+                const card = document.getElementById(`card-${{activeMarkerIndex}}`);
+                if (card) {{
                     card.classList.remove("active");
-                }
-            }
+                }}
+            }}
             activeMarkerIndex = -1;
-        }
+        }}
 
         // Collapsible Sidebar Setup
         const sidebar = document.getElementById("sidebar");
@@ -1284,76 +1125,76 @@
         const toggleIcon = document.getElementById("toggle-icon");
         const toggleText = document.getElementById("toggle-text");
 
-        function updateSidebarToggle() {
+        function updateSidebarToggle() {{
             const isCollapsed = sidebar.classList.contains("collapsed");
             const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
+            if (isMobile) {{
                 toggleIcon.innerText = isCollapsed ? "▲" : "▼";
-            } else {
+            }} else {{
                 toggleIcon.innerText = isCollapsed ? "▶" : "◀";
-            }
+            }}
             toggleText.innerText = isCollapsed ? "Show List" : "Hide List";
-        }
+        }}
 
-        function closeMobilePanel() {
+        function closeMobilePanel() {{
             const panel = document.getElementById("detail-panel");
-            if (panel) {
+            if (panel) {{
                 panel.classList.remove("active");
-            }
+            }}
             const sidebarEl = document.getElementById("sidebar");
-            if (sidebarEl) {
+            if (sidebarEl) {{
                 sidebarEl.classList.remove("collapsed");
-            }
+            }}
             deactivateAll();
             updateSidebarToggle();
-            if (map) {
-                setTimeout(() => {
+            if (map) {{
+                setTimeout(() => {{
                     google.maps.event.trigger(map, 'resize');
-                }, 300);
-            }
-        }
+                }}, 300);
+            }}
+        }}
 
         // Close Mobile Panel button listener
-        document.getElementById("detail-close").addEventListener("click", () => {
+        document.getElementById("detail-close").addEventListener("click", () => {{
             closeMobilePanel();
-        });
+        }});
 
-        toggleBtn.addEventListener("click", () => {
+        toggleBtn.addEventListener("click", () => {{
             const isCollapsed = sidebar.classList.toggle("collapsed");
             updateSidebarToggle();
             
             // If we manually show the list on mobile, close the details panel
-            if (!isCollapsed && window.innerWidth <= 768) {
+            if (!isCollapsed && window.innerWidth <= 768) {{
                 const panel = document.getElementById("detail-panel");
-                if (panel) {
+                if (panel) {{
                     panel.classList.remove("active");
-                }
-            }
+                }}
+            }}
             
             // Trigger maps resize
-            if (map) {
-                setTimeout(() => {
+            if (map) {{
+                setTimeout(() => {{
                     google.maps.event.trigger(map, 'resize');
-                }, 300);
-            }
-        });
+                }}, 300);
+            }}
+        }});
 
-        window.addEventListener("resize", () => {
+        window.addEventListener("resize", () => {{
             updateSidebarToggle();
-            if (window.innerWidth > 768) {
+            if (window.innerWidth > 768) {{
                 const panel = document.getElementById("detail-panel");
-                if (panel) {
+                if (panel) {{
                     panel.classList.remove("active");
-                }
-            }
-        });
+                }}
+            }}
+        }});
 
         // Initialize state on load
         updateSidebarToggle();
 
         // Live Search Filtering
         const searchInput = document.getElementById("search-input");
-        searchInput.addEventListener("input", (e) => {
+        searchInput.addEventListener("input", (e) => {{
             const query = e.target.value.toLowerCase().trim();
             const filtered = locations.filter(loc => 
                 loc.name.toLowerCase().includes(query) || 
@@ -1363,15 +1204,27 @@
             renderSidebarList(filtered);
             
             // Show/hide markers based on match
-            locations.forEach((loc, idx) => {
+            locations.forEach((loc, idx) => {{
                 const isMatch = filtered.some(f => f.number === loc.number);
-                if (markers[idx]) {
+                if (markers[idx]) {{
                     markers[idx].setVisible(isMatch);
-                }
-            });
-        });
+                }}
+            }});
+        }});
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB9_MF2J2Lkb2WhL2-fwwRkfsobBJ0Clps&callback=initMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={API_KEY}&callback=initMap" async defer></script>
 </body>
 
 </html>
+"""
+
+    with open(OUTPUT_PATH, 'w') as f:
+        f.write(html_content)
+
+    with open(MAP_HTML_PATH, 'w') as f:
+        f.write(html_content)
+
+    print(f"Successfully generated index.html and map.html with {len(markers)} markers.")
+
+if __name__ == '__main__':
+    main()

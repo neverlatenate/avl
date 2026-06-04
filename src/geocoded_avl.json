@@ -1,0 +1,194 @@
+[
+  {
+    "number": 1,
+    "name": "Pack Square",
+    "address": "N Pack Square, Asheville, NC 28801",
+    "lat": 35.5952657,
+    "lng": -82.5518417,
+    "formatted_address": "N Pack Square, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 2,
+    "name": "The Block",
+    "address": "Intersection of Eagle and Market Streets, Asheville, NC 28801",
+    "lat": 35.5940222,
+    "lng": -82.55024209999999,
+    "formatted_address": "S Market St & Eagle St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 3,
+    "name": "Asheville City Hall",
+    "address": "70 Court Plaza, Asheville, NC 28801",
+    "lat": 35.5954894,
+    "lng": -82.5485842,
+    "formatted_address": "70 Court Plaza, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 4,
+    "name": "Black Mountain College Museum",
+    "address": "120 College St, Asheville, NC 28801",
+    "lat": 35.5959506,
+    "lng": -82.5505268,
+    "formatted_address": "120 College St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 5,
+    "name": "Sprinza Weizenblatt’s Office",
+    "address": "29 North Market Street, Asheville, NC 28801",
+    "lat": 35.5966906,
+    "lng": -82.55135659999999,
+    "formatted_address": "29 N Market St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 6,
+    "name": "Asheville Community Theatre",
+    "address": "35 E Walnut St, Asheville, NC 28801",
+    "lat": 35.5972285,
+    "lng": -82.5508232,
+    "formatted_address": "35 E Walnut St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 7,
+    "name": "Blomberg Annex to Asheville Community Theatre",
+    "address": "Corner of E Walnut St & N Market St, Asheville, NC 28801",
+    "lat": 35.5971566,
+    "lng": -82.5513069,
+    "formatted_address": "N Market St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 8,
+    "name": "Schandler’s Pickle Barrel",
+    "address": "50 Broadway St, Asheville, NC 28801",
+    "lat": 35.5968431,
+    "lng": -82.5519349,
+    "formatted_address": "50 Broadway St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 9,
+    "name": "Finkelstein's Pawn Shop",
+    "address": "21 Broadway St, Asheville, NC 28801",
+    "lat": 35.5960396,
+    "lng": -82.5523358,
+    "formatted_address": "21 Broadway St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 10,
+    "name": "Black Mountain College Tribute Wall",
+    "address": "Alley off W Walnut St between Broadway St and N Lexington Ave, Asheville, NC 28801",
+    "lat": 35.59664879075107,
+    "lng": -82.55257361045591,
+    "formatted_address": "Alley off W Walnut St between Broadway St and N Lexington Ave, Asheville, NC 28801"
+  },
+  {
+    "number": 11,
+    "name": "Asheville Showcase",
+    "address": "57 Broadway St, Asheville, NC 28801",
+    "lat": 35.5972734,
+    "lng": -82.5525409,
+    "formatted_address": "57 Broadway St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 12,
+    "name": "Moogseum",
+    "address": "56 Broadway St Front, Asheville, NC 28801",
+    "lat": 35.5973126,
+    "lng": -82.5521351,
+    "formatted_address": "56 Broadway St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 13,
+    "name": "Masonic Temple",
+    "address": "80 Broadway St, Asheville, NC 28801",
+    "lat": 35.5981415,
+    "lng": -82.55233760000002,
+    "formatted_address": "80 Broadway St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 14,
+    "name": "Chicken Alley",
+    "address": "Chicken Alley, Asheville, NC 28801",
+    "lat": 35.5979519,
+    "lng": -82.5533979,
+    "formatted_address": "Chicken Alley, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 15,
+    "name": "Bessie Rosen’s Grocery Store",
+    "address": "88 N Lexington Avenue, Asheville, NC 28801",
+    "lat": 35.5978524,
+    "lng": -82.5534768,
+    "formatted_address": "88 N Lexington Ave, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 16,
+    "name": "Vanderbilt Shirt Factory",
+    "address": "65 W Walnut St, Asheville, NC 28801",
+    "lat": 35.5965455,
+    "lng": -82.5535234,
+    "formatted_address": "65 W Walnut St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 17,
+    "name": "Tops for Shoes",
+    "address": "27 N Lexington Ave, Asheville, NC 28801",
+    "lat": 35.59571460000001,
+    "lng": -82.5532655,
+    "formatted_address": "27 N Lexington Ave, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 18,
+    "name": "Coleman Zagier and the Man’s Store",
+    "address": "22 Patton Ave, Asheville, NC 28801",
+    "lat": 35.5947175,
+    "lng": -82.55277869999999,
+    "formatted_address": "22 Patton Ave, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 19,
+    "name": "S and W Cafeteria",
+    "address": "56 Patton Ave, Asheville, NC 28801",
+    "lat": 35.5943974,
+    "lng": -82.55390249999999,
+    "formatted_address": "The S&W Building, 56 Patton Ave, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 20,
+    "name": "Flatiron Building",
+    "address": "20 Battery Park Ave, Asheville, NC 28801",
+    "lat": 35.5950016,
+    "lng": -82.5551785,
+    "formatted_address": "20 Battery Park Ave, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 21,
+    "name": "Bon Marche Department Store",
+    "address": "33 Haywood St, Asheville, NC 28801",
+    "lat": 35.5957,
+    "lng": -82.5545714,
+    "formatted_address": "33 Haywood St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 22,
+    "name": "Winners Department store",
+    "address": "36 Haywood Street, Asheville, NC 28801",
+    "lat": 35.5956872,
+    "lng": -82.5549182,
+    "formatted_address": "36 Haywood St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 23,
+    "name": "The Family Store Plaque",
+    "address": "46 Haywood Street on the sidewalk by the Urban Trail Marker to Shoppers, Asheville, NC 28801",
+    "lat": 35.5959356,
+    "lng": -82.55504669999999,
+    "formatted_address": "46 Haywood St, Asheville, NC 28801, USA"
+  },
+  {
+    "number": 24,
+    "name": "Basilica of Saint Laurence",
+    "address": "97 Haywood St, Asheville, NC 28801",
+    "lat": 35.597352,
+    "lng": -82.55631199999999,
+    "formatted_address": "97 Haywood St, Asheville, NC 28801, USA"
+  }
+]
